@@ -82,6 +82,16 @@
 #ifdef _WIN32
 typedef SSIZE_T ssize_t;
 
+inline char *
+stpcpy(char *dest, const char *src)
+{
+    while (*src != '\0') {
+        *dest++ = *src++;
+    }
+    *dest = '\0';
+    return dest;
+}
+
 struct cpu_set_t {
     DWORD_PTR mask;
 };

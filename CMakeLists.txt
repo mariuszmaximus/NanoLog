@@ -12,3 +12,4 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_subdirectory(runtime)
 add_subdirectory(sample)
+add_subdirectory(sample_preprocessor)
