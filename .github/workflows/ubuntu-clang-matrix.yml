@@ -1,4 +1,4 @@
-name: Ubuntu Clang Matrix
+name: Ubuntu Build And Run Sample
 
 on:
   push:
@@ -14,44 +14,60 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        clang_version:
-          - 21
-          - 22
+        include:
+          - name: gcc
+            install_cmd: sudo apt-get install -y cmake ninja-build g++ python3
+            cc: gcc
+            cxx: g++
+            build_cmd: cmake --build build --parallel --target sampleApplication decompressor
+          - name: clang-21
+            install_cmd: |
+              sudo apt-get install -y ca-certificates cmake gnupg ninja-build python3 wget
+              wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | \
+                sudo gpg --dearmor -o /usr/share/keyrings/llvm-archive-keyring.gpg
+              echo "deb [signed-by=/usr/share/keyrings/llvm-archive-keyring.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main" | \
+                sudo tee /etc/apt/sources.list.d/llvm.list
+              sudo apt-get update
+              sudo apt-get install -y clang-21 lld-21
+            cc: clang-21
+            cxx: clang++-21
+            build_cmd: cmake --build build --parallel --verbose --target sampleApplication decompressor
+          - name: clang-22
+            install_cmd: |
+              sudo apt-get install -y ca-certificates cmake gnupg ninja-build python3 wget
+              wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | \
+                sudo gpg --dearmor -o /usr/share/keyrings/llvm-archive-keyring.gpg
+              echo "deb [signed-by=/usr/share/keyrings/llvm-archive-keyring.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" | \
+                sudo tee /etc/apt/sources.list.d/llvm.list
+              sudo apt-get update
+              sudo apt-get install -y clang-22 lld-22
+            cc: clang-22
+            cxx: clang++-22
+            build_cmd: cmake --build build --parallel --verbose --target sampleApplication decompressor
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install base dependencies
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ca-certificates cmake gnupg ninja-build python3 wget
-
-      - name: Add LLVM apt repository
-        run: |
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | \
-            sudo gpg --dearmor -o /usr/share/keyrings/llvm-archive-keyring.gpg
-          echo "deb [signed-by=/usr/share/keyrings/llvm-archive-keyring.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ matrix.clang_version }} main" | \
-            sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt-get update
-
-      - name: Install Clang ${{ matrix.clang_version }}
-        run: |
-          sudo apt-get install -y clang-${{ matrix.clang_version }} lld-${{ matrix.clang_version }}
+          ${{ matrix.install_cmd }}
 
       - name: Show compiler version
+        if: ${{ matrix.cxx != '' }}
         run: |
-          clang-${{ matrix.clang_version }} --version
-          clang++-${{ matrix.clang_version }} --version
+          ${{ matrix.cc }} --version
+          ${{ matrix.cxx }} --version
 
       - name: Configure
         env:
-          CC: clang-${{ matrix.clang_version }}
-          CXX: clang++-${{ matrix.clang_version }}
+          CC: ${{ matrix.cc }}
+          CXX: ${{ matrix.cxx }}
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
-        run: cmake --build build --parallel --verbose --target sampleApplication decompressor
+        run: ${{ matrix.build_cmd }}
 
       - name: Run sample application
         run: ./build/sample/sampleApplication
