@@ -762,7 +762,7 @@ TEST_F(NanoLogCpp17Test, compressSingle) {
 }
 
 TEST_F(NanoLogCpp17Test, compress_internal) {
-    BufferUtils::TwoNibbles nibbles[10];
+    BufferUtils::TwoNibbles nibbles[10] {};
     const ParamType isArgString[] = {NON_STRING,
                                      STRING_WITH_NO_PRECISION,
                                      STRING,
