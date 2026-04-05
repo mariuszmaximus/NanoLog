@@ -322,7 +322,7 @@ def peekNextMeaningfulChar(lines, filePos):
 #
 def processFile(inputFile, mapOutputFilename):
   functionGenerator = FunctionGenerator()
-  directiveRegex = re.compile("^# (\d+) \"(.*)\"(.*)")
+  directiveRegex = re.compile(r'^# (\d+) "(.*)"(.*)')
 
   with open(inputFile) as f, open(inputFile + "i", 'w') as output:
     try:

@@ -23,8 +23,10 @@ else()
     target_compile_options(NanoLog PRIVATE -Wall -Wextra -Wformat -Werror=format)
 endif()
 
-find_package(Threads REQUIRED)
-target_link_libraries(NanoLog PUBLIC Threads::Threads)
+if(NOT WIN32)
+    find_package(Threads REQUIRED)
+    target_link_libraries(NanoLog PUBLIC Threads::Threads)
+endif()
 
 if(UNIX AND NOT APPLE)
     target_link_libraries(NanoLog PUBLIC rt)
@@ -51,10 +53,12 @@ else()
     target_compile_options(decompressor PRIVATE -Wall -Wextra)
 endif()
 
-target_link_libraries(decompressor
-    PRIVATE
-        Threads::Threads
-)
+if(NOT WIN32)
+    target_link_libraries(decompressor
+        PRIVATE
+            Threads::Threads
+    )
+endif()
 
 if(UNIX AND NOT APPLE)
     target_link_libraries(decompressor PRIVATE rt)

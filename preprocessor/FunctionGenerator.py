@@ -465,6 +465,8 @@ inline {function_declaration} {{
     if (level > {getLogLevelFn}())
         return;
 
+    (void) fmtStr;
+
     uint64_t timestamp = PerfUtils::Cycles::rdtsc();
     {strlen_declaration};
     size_t allocSize = {primitive_size_sum} {strlen_sum} sizeof({entry});

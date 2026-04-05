@@ -225,7 +225,7 @@ Log::Encoder::encodeLogMsgs(char *from,
     while (remaining > 0) {
         auto *entry = reinterpret_cast<UncompressedEntry*>(from);
 
-        if (entry->entrySize > remaining) {
+        if (entry->entrySize > static_cast<uint32_t>(remaining)) {
             if (entry->entrySize < (NanoLogConfig::STAGING_BUFFER_SIZE/2))
                 break;
 

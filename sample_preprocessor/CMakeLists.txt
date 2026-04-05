@@ -1,5 +1,8 @@
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
-find_package(Threads REQUIRED)
+
+if(NOT WIN32)
+    find_package(Threads REQUIRED)
+endif()
 
 set(SAMPLE_PREPROC_RUNTIME_SOURCES
     ${PROJECT_SOURCE_DIR}/runtime/Cycles.cc
@@ -124,7 +127,9 @@ else()
     )
 endif()
 
-target_link_libraries(samplePreprocessorNanoLog PUBLIC Threads::Threads)
+if(NOT WIN32)
+    target_link_libraries(samplePreprocessorNanoLog PUBLIC Threads::Threads)
+endif()
 
 if(UNIX AND NOT APPLE)
     target_link_libraries(samplePreprocessorNanoLog PUBLIC rt)
@@ -169,7 +174,9 @@ else()
     )
 endif()
 
-target_link_libraries(samplePreprocessorDecompressor PRIVATE Threads::Threads)
+if(NOT WIN32)
+    target_link_libraries(samplePreprocessorDecompressor PRIVATE Threads::Threads)
+endif()
 
 if(UNIX AND NOT APPLE)
     target_link_libraries(samplePreprocessorDecompressor PRIVATE rt)
