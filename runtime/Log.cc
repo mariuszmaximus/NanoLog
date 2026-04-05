@@ -14,6 +14,7 @@
  */
 
 #include <algorithm>
+#include <cinttypes>
 #include <regex>
 #include <vector>
 
@@ -331,9 +332,9 @@ Log::Encoder::encodeLogMsgs(char *from,
                                 "log message (id=%u) during compression. If "
                                 "you are using Preprocessor NanoLog, there is "
                                 "be a problem with your integration (static "
-                                "logs detected=%lu).\r\n",
+                                "logs detected=%zu).\r\n",
                                 entry->fmtId,
-                                 GeneratedFunctions::numLogIds);
+                                GeneratedFunctions::numLogIds);
             }
 
             break;
@@ -347,7 +348,7 @@ Log::Encoder::encodeLogMsgs(char *from,
         printf("\t%s\r\n", dictionary.at(entry->fmtId).formatString);
 #endif
 
-        if (entry->entrySize > remaining) {
+        if (entry->entrySize > static_cast<uint32_t>(remaining)) {
             if (entry->entrySize < (NanoLogConfig::STAGING_BUFFER_SIZE/2))
                 break;
 
@@ -686,7 +687,7 @@ Log::Decoder::readDictionary(FILE *fd, bool flushOldDictionary) {
 
     if (newEnd != endOfRawMetadata) {
         fprintf(stderr, "Error: Log dictionary is inconsistent; "
-                        "expected %lu bytes, but read %lu bytes\r\n",
+                        "expected %td bytes, but read %td bytes\r\n",
                 newEnd - start,
                 endOfRawMetadata - start);
         return false;
@@ -694,7 +695,7 @@ Log::Decoder::readDictionary(FILE *fd, bool flushOldDictionary) {
 
     if (fmtId2metadata.size() != checkpoint.totalMetadataEntries) {
         fprintf(stderr, "Error: Missing log metadata detected; "
-                        "expected %u messages, but only found %lu\r\n",
+                        "expected %u messages, but only found %zu\r\n",
                        checkpoint.totalMetadataEntries,
                        fmtId2metadata.size());
         return false;
@@ -992,12 +993,11 @@ Log::Decoder::readDictionaryFragment(FILE *fd) {
     // These buffers start us off with some statically allocated space.
     // Should we need more, we will malloc it.
     size_t bufferSize = 10*1024;
-    char filenameBuffer[bufferSize];
-    char formatBuffer[bufferSize];
+    std::vector<char> filenameBuffer(bufferSize);
+    std::vector<char> formatBuffer(bufferSize);
 
-    bool newBuffersAllocated = false;
-    char *filename = filenameBuffer;
-    char *format = formatBuffer;
+    char *filename = filenameBuffer.data();
+    char *format = formatBuffer.data();
 
     DictionaryFragment df;
     size_t bytesRead = fread(&df, 1, sizeof(DictionaryFragment), fd);
@@ -1021,21 +1021,16 @@ Log::Decoder::readDictionaryFragment(FILE *fd) {
         if (bufferSize < cli.filenameLength ||
             bufferSize < cli.formatStringLength)
         {
-            if (newBuffersAllocated) {
-                free(filename);
-                free(format);
-                filename = format = nullptr;
-            }
-
-            newBuffersAllocated = true;
             bufferSize = 2*std::max(cli.filenameLength, cli.formatStringLength);
-            filename = static_cast<char*>(malloc(bufferSize));
-            format = static_cast<char*>(malloc(bufferSize));
+            filenameBuffer.resize(bufferSize);
+            formatBuffer.resize(bufferSize);
+            filename = filenameBuffer.data();
+            format = formatBuffer.data();
 
             if (filename == nullptr || format == nullptr) {
                 fprintf(stderr, "Internal Error: Could not allocate enough "
                                "memory to store the filename/format strings "
-                               "in the dictionary. Tried to allocate %lu bytes "
+                               "in the dictionary. Tried to allocate %zu bytes "
                                "to store the %u and %u byte filename and "
                                "format string lengths respectively",
                                bufferSize,
@@ -1064,11 +1059,6 @@ Log::Decoder::readDictionaryFragment(FILE *fd) {
                             filename,
                             cli.linenum,
                             cli.severity);
-    }
-
-    if (newBuffersAllocated) {
-        free(filename);
-        free(format);
     }
 
     return true;
@@ -1321,6 +1311,10 @@ Log::Decoder::BufferFragment::decompressNextLogStatement(FILE *outputFd,
                                         long aggregationFilterId,
                                         void (*aggregationFn)(const char*, ...))
 {
+#ifndef PREPROCESSOR_NANOLOG
+    (void)aggregationFilterId;
+    (void)aggregationFn;
+#endif
     double secondsSinceCheckpoint, nanos = 0.0;
     char timeString[32];
 
@@ -1382,14 +1376,15 @@ Log::Decoder::BufferFragment::decompressNextLogStatement(FILE *outputFd,
         }
 
         void (*aggFn)(const char*, ...) = nullptr;
-        if (aggregationFilterId == nextLogId)
+        if (aggregationFilterId >= 0 &&
+                static_cast<uint32_t>(aggregationFilterId) == nextLogId)
             aggFn = aggregationFn;
 
         if (nextLogId >= GeneratedFunctions::numLogIds) {
             fprintf(stderr, "Log message id=%u not found in the generated "
                             "functions list for Preprocessor NanoLog.\r\n"
                             "This indicates either a corrupt log file or "
-                            "a mismatched decompressor as we only have %lu "
+                            "a mismatched decompressor as we only have %zu "
                             "generated functions\r\n"
                             , nextLogId
                             , GeneratedFunctions::numLogIds);
@@ -1776,7 +1771,7 @@ Log::Decoder::internalDecompressUnordered(FILE* outputFd,
 
     if (outputFd)
         fprintf(outputFd, "\r\n\r\n# Decompression Complete after printing "
-                            "%lu log messages\r\n", logMsgsPrinted);
+                            "%" PRIu64 " log messages\r\n", logMsgsPrinted);
 
     freeBufferFragment(bf);
     return good;

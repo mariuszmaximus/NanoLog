@@ -95,9 +95,11 @@ void runBenchmark() {
 
     time_span = std::chrono::duration_cast<std::chrono::duration<double>>(
                                                         stop - start).count();
-    printf("The total time spent invoking NANO_LOG with no parameters %lu "
+    printf("The total time spent invoking NANO_LOG with no parameters %llu "
             "times took %0.2lf seconds (%0.2lf ns/message average)\r\n",
-            RECORDS, time_span, (time_span/RECORDS)*1e9);
+            static_cast<unsigned long long>(RECORDS),
+            time_span,
+            (time_span/RECORDS)*1e9);
 
     start = std::chrono::high_resolution_clock::now();
     // Flush all pending log messages to disk

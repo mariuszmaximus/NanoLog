@@ -438,7 +438,7 @@ using namespace NanoLog;
 
             // Number of cycles producer was blocked while waiting for space to
             // free up in the StagingBuffer for an allocation.
-            uint64_t cyclesProducerBlocked;
+            [[maybe_unused]] uint64_t cyclesProducerBlocked;
 
             // Number of times the producer was blocked while waiting for space
             // to free up in the StagingBuffer for an allocation
@@ -460,7 +460,7 @@ using namespace NanoLog;
             // An extra cache-line to separate the variables that are primarily
             // updated/read by the producer (above) from the ones by the
             // consumer(below)
-            char cacheLineSpacer[2*Util::BYTES_PER_CACHE_LINE];
+            [[maybe_unused]] char cacheLineSpacer[2*Util::BYTES_PER_CACHE_LINE];
 
             // Position within the storage buffer where the consumer will consume
             // the next bytes from. This value is only updated by the consumer.

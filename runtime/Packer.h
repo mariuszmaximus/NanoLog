@@ -342,9 +342,6 @@ PRIVATE:
     // Indicates whether whether to use the first nibble or second
     bool onFirstNibble;
 
-    // Number of nibbles in this stream
-    int numNibbles;
-
     // Position in the stream marking the next packed value
     const char *currPackedValue;
 
@@ -363,7 +360,6 @@ public:
     Nibbler(const char *nibbleStart, int numNibbles)
         : nibblePosition(reinterpret_cast<const TwoNibbles*>(nibbleStart))
         , onFirstNibble(true)
-        , numNibbles(numNibbles)
         , currPackedValue(nibbleStart + (numNibbles + 1)/2)
         , endOfValues(nullptr)
     {

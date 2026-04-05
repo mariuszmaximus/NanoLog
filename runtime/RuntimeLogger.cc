@@ -15,6 +15,7 @@
 
 
 #include <fcntl.h>
+#include <cinttypes>
 #include <iosfwd>
 #include <iostream>
 #include <locale>
@@ -166,7 +167,7 @@ RuntimeLogger::getStats() {
             nanoLogSingleton.logsProcessed);
 
     snprintf(buffer, 1024,
-               "\r\nWrote %lu events (%0.2lf MB) in %0.3lf seconds "
+               "\r\nWrote %" PRIu64 " events (%0.2lf MB) in %0.3lf seconds "
                    "(%0.3lf seconds spent compressing)\r\n",
                nanoLogSingleton.logsProcessed,
                totalBytesWrittenDouble / 1.0e6,
@@ -222,7 +223,8 @@ RuntimeLogger::getStats() {
     out << buffer;
 
     snprintf(buffer, 1024, "The compression ratio was %0.2lf-%0.2lfx "
-                   "(%lu bytes in, %lu bytes out, %lu pad bytes)\n",
+                   "(%" PRIu64 " bytes in, %" PRIu64 " bytes out, %" PRIu64
+                   " pad bytes)\n",
            1.0 * totalBytesReadDouble / (totalBytesWrittenDouble
                                          + padBytesWrittenDouble),
            1.0 * totalBytesReadDouble / totalBytesWrittenDouble,
@@ -255,7 +257,7 @@ RuntimeLogger::getHistograms()
             Util::arraySize(nanoLogSingleton.stagingBufferPeekDist);
     for (size_t i = 0; i < numIntervals; ++i) {
         snprintf(buffer, 1024
-                , "\t%02lu - %02lu%%: %lu\r\n"
+                , "\t%02zu - %02zu%%: %" PRIu64 "\r\n"
                 , i*100/numIntervals
                 , (i+1)*100/numIntervals
                 , nanoLogSingleton.stagingBufferPeekDist[i]);
@@ -271,7 +273,7 @@ RuntimeLogger::getHistograms()
                 out << buffer;
 
                 snprintf(buffer, 1024,
-                                 "\tAllocations   : %lu\r\n"
+                                 "\tAllocations   : %" PRIu64 "\r\n"
                                  "\tTimes Blocked : %u\r\n",
                          sb->numAllocations,
                          sb->numTimesProducerBlocked);

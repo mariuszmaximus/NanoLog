@@ -120,7 +120,8 @@ cpu_set_t getCpuAffinity() {
     CPU_ZERO(&cpuset);
 #ifdef _WIN32
     DWORD_PTR processMask = 0;
-    DWORD_PTR systemMask = 0;
+    [[maybe_unused]] DWORD_PTR systemMask = 0;
+    (void)systemMask; // silence unused variable warning on Windows
     assert(GetProcessAffinityMask(GetCurrentProcess(), &processMask, &systemMask));
     cpuset.mask = processMask;
 #else
@@ -139,7 +140,7 @@ cpu_set_t getCpuAffinity() {
  *      current thread is permitted to run on.
  */
 static FORCE_INLINE
-void setCpuAffinity(cpu_set_t cpuset) {
+void setCpuAffinity([[maybe_unused]] cpu_set_t cpuset) {
 #ifdef _WIN32
     assert(SetThreadAffinityMask(GetCurrentThread(), cpuset.mask) != 0);
 #else

@@ -14,6 +14,7 @@
  */
 
 #include <algorithm>
+#include <cinttypes>
 #include <fstream>
 #include <vector>
 
@@ -61,7 +62,7 @@ printLogMetadataContainingSubstring(std::string searchString)
     for (auto id : matchingLogIds) {
         GeneratedFunctions::LogMetadata lm =
                 GeneratedFunctions::logId2Metadata[id];
-        printf("%4lu | %-20s | %-4u | %s\r\n", id, lm.fileName, lm.lineNumber,
+        printf("%4zu | %-20s | %-4u | %s\r\n", id, lm.fileName, lm.lineNumber,
                                                                 lm.fmtString);
     }
 }
@@ -250,7 +251,7 @@ int main(int argc, char** argv) {
         double rcdfTime = PerfUtils::Cycles::toSeconds(stop - start);
 
         double totalTime = reserveTime + decodeTime + rcdfTime;
-        printf("# Took %0.2lf seconds to aggregate %lu time entries "
+        printf("# Took %0.2lf seconds to aggregate %zu time entries "
                "(%0.2lf ns/event avg)\r\n",
                totalTime, interLogTimes.size(),
                1.0e9 * totalTime / double(interLogTimes.size()));
@@ -270,7 +271,7 @@ int main(int argc, char** argv) {
 
         if (outputFd)
             fprintf(outputFd, "\r\n\r\n# Decompression Complete after printing "
-                              "%ld log messages\r\n", numLogMsgs);
+                              "%" PRId64 " log messages\r\n", numLogMsgs);
         return 0;
     }
 
@@ -282,7 +283,7 @@ int main(int argc, char** argv) {
 
         if (outputFd)
             fprintf(outputFd, "\r\n\r\n# Decompression Complete after printing "
-                              "%ld log messages\r\n", numLogMsgs);
+                              "%" PRId64 " log messages\r\n", numLogMsgs);
         return 0;
     }
 
@@ -321,7 +322,7 @@ int main(int argc, char** argv) {
                 GeneratedFunctions::logId2Metadata[filterId].fmtString,
                 filterId);
 #endif // PREPROCESSOR_NANOLOG
-    printf("Logs Encountered: %lu\r\n", numLogs);
+    printf("Logs Encountered: %" PRIu64 "\r\n", numLogs);
     printf("Matching Logs: %ld (%0.2lf%%)\r\n", count,
             (100.0*(double)count)/(double)numLogs);
     printf("Min: %ld\r\n", min);
