@@ -71,8 +71,11 @@ jobs:
       - name: Build
         run: ${{ matrix.build_cmd }}
 
-      - name: Run runtime tests
-        run: ctest --test-dir build --output-on-failure -R "PackerTest|RuntimeTest"
+      - name: Run PackerTest
+        run: ./build/runtime/PackerTest
+
+      - name: Run RuntimeTest
+        run: ./build/runtime/RuntimeTest
 
       - name: Run sample application
         run: ./build/sample/sampleApplication
