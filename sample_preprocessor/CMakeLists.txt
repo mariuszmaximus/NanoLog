@@ -67,7 +67,6 @@ add_custom_command(
 add_custom_command(
     OUTPUT ${SAMPLE_PREPROC_USER_OBJECT}
     COMMAND ${CMAKE_CXX_COMPILER}
-            -I ${PROJECT_SOURCE_DIR}/runtime
             -c
             -o ${SAMPLE_PREPROC_USER_OBJECT}
             ${SAMPLE_PREPROC_INJECTED}

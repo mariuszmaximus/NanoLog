@@ -192,10 +192,6 @@ struct LogMetadata {{
   {logLevelEnum} logLevel;
 }};
 
-// Start an empty namespace to enclose all the record(debug)/compress/decompress
-// and support functions
-namespace {{
-
 using namespace NanoLog::LogLevels;
 """.format(logLevelEnum=LOG_LEVEL_ENUM))
             for logId, code in sorted(mergedCode.items()):
@@ -207,8 +203,6 @@ using namespace NanoLog::LogLevels;
                 oFile.write(code["decompressFnDef"] + "\n")
 
             oFile.write("""
-} // end empty namespace
-
 // Assignment of numerical ids to format NANO_LOG occurrences
 """)
 
@@ -230,7 +224,7 @@ using namespace NanoLog::LogLevels;
                     code["logLevel"]
                 ))
 
-                oFile.write("extern const int %s = %d; // %s:%d \"%s\"\n" % (
+                oFile.write("extern const uint32_t %s = %d; // %s:%d \"%s\"\n" % (
                         generateIdVariableNameFromLogId(logId),
                         count,
                         code["filename"],
