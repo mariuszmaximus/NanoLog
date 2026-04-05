@@ -1,4 +1,4 @@
-name: Ubuntu Build And Run Sample
+name: Ubuntu Build And Test
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
             install_cmd: sudo apt-get install -y cmake ninja-build g++ python3
             cc: gcc
             cxx: g++
-            build_cmd: cmake --build build --parallel --target sampleApplication decompressor
+            build_cmd: cmake --build build --parallel --target sampleApplication decompressor PackerTest RuntimeTest
           - name: clang-21
             install_cmd: |
               sudo apt-get install -y ca-certificates cmake gnupg ninja-build python3 wget
@@ -31,7 +31,7 @@ jobs:
               sudo apt-get install -y clang-21 lld-21
             cc: clang-21
             cxx: clang++-21
-            build_cmd: cmake --build build --parallel --verbose --target sampleApplication decompressor
+            build_cmd: cmake --build build --parallel --verbose --target sampleApplication decompressor PackerTest RuntimeTest
           - name: clang-22
             install_cmd: |
               sudo apt-get install -y ca-certificates cmake gnupg ninja-build python3 wget
@@ -43,11 +43,13 @@ jobs:
               sudo apt-get install -y clang-22 lld-22
             cc: clang-22
             cxx: clang++-22
-            build_cmd: cmake --build build --parallel --verbose --target sampleApplication decompressor
+            build_cmd: cmake --build build --parallel --verbose --target sampleApplication decompressor PackerTest RuntimeTest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Install dependencies
         run: |
@@ -64,10 +66,13 @@ jobs:
         env:
           CC: ${{ matrix.cc }}
           CXX: ${{ matrix.cxx }}
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DNANOLOG_BUILD_EXPERIMENTAL_TESTS=ON
 
       - name: Build
         run: ${{ matrix.build_cmd }}
+
+      - name: Run runtime tests
+        run: ctest --test-dir build --output-on-failure -R "PackerTest|RuntimeTest"
 
       - name: Run sample application
         run: ./build/sample/sampleApplication
