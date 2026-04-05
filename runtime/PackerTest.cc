@@ -518,7 +518,7 @@ TEST_F(PackerTest, nibbler_assert) {
     EXPECT_EQ((float)0.1, nb.getNext<float>());
     EXPECT_EQ((double)0.2, nb.getNext<double>());
 #ifdef NDEBUG
-    GTEST_SKIP() << "Nibbler bounds-check assertion is disabled in release builds";
+    printf("Skipping death assertion in release builds because bounds-check asserts are disabled.\n");
 #else
     EXPECT_DEATH(nb.getNext<int>(), "");
 #endif
