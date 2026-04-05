@@ -1,0 +1,63 @@
+name: Ubuntu Clang Matrix
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-run-sample:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        clang_version:
+          - 21
+          - 22
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install base dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates cmake gnupg ninja-build python3 wget
+
+      - name: Add LLVM apt repository
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | \
+            sudo gpg --dearmor -o /usr/share/keyrings/llvm-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/llvm-archive-keyring.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ matrix.clang_version }} main" | \
+            sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+
+      - name: Install Clang ${{ matrix.clang_version }}
+        run: |
+          sudo apt-get install -y clang-${{ matrix.clang_version }} lld-${{ matrix.clang_version }}
+
+      - name: Show compiler version
+        run: |
+          clang-${{ matrix.clang_version }} --version
+          clang++-${{ matrix.clang_version }} --version
+
+      - name: Configure
+        env:
+          CC: clang-${{ matrix.clang_version }}
+          CXX: clang++-${{ matrix.clang_version }}
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Run sample application
+        run: ./build/sample/sampleApplication
+
+      - name: Decompress log and verify output
+        run: |
+          ./build/runtime/decompressor decompress /tmp/logFile | tee decompressed.log
+          grep -F "Simple log message with 0 parameters" decompressed.log
+          grep -F "A string, pointer, number, and float:" decompressed.log
