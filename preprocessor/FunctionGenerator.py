@@ -660,6 +660,8 @@ inline void
             else:
                 enumType = "NONE"
 
+            enumType = "NanoLogInternal::Log::" + enumType
+
             dictionaryFragment += """
             // Fragment {count}
             if (buffer + sizeof(PrintFragment)

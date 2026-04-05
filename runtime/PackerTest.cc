@@ -404,13 +404,13 @@ TEST_F(PackerTest, getSizeOfPackedValues) {
     EXPECT_EQ(18, getSizeOfPackedValues(nibbles, nibbleCntr));
     nibbles[nibbleCntr++/2].second = pack(&buffer, uint64_t(1<<24));
     EXPECT_EQ(22, getSizeOfPackedValues(nibbles, nibbleCntr));
-    nibbles[nibbleCntr++/2].first  = pack(&buffer, uint64_t(1UL<<32));
+    nibbles[nibbleCntr++/2].first  = pack(&buffer, uint64_t(1ULL << 32));
     EXPECT_EQ(27, getSizeOfPackedValues(nibbles, nibbleCntr));
-    nibbles[nibbleCntr++/2].second = pack(&buffer, uint64_t(1UL<<40));
+    nibbles[nibbleCntr++/2].second = pack(&buffer, uint64_t(1ULL << 40));
     EXPECT_EQ(33, getSizeOfPackedValues(nibbles, nibbleCntr));
-    nibbles[nibbleCntr++/2].first  = pack(&buffer, uint64_t(1UL<<48));
+    nibbles[nibbleCntr++/2].first  = pack(&buffer, uint64_t(1ULL << 48));
     EXPECT_EQ(40, getSizeOfPackedValues(nibbles, nibbleCntr));
-    nibbles[nibbleCntr++/2].second = pack(&buffer, uint64_t(1UL<<56));
+    nibbles[nibbleCntr++/2].second = pack(&buffer, uint64_t(1ULL << 56));
     EXPECT_EQ(48, getSizeOfPackedValues(nibbles, nibbleCntr));
 
     // Try signed numbers
@@ -448,10 +448,10 @@ TEST_F(PackerTest, nibbler) {
     nibbles[nibbleCntr++/2].second = pack(&buffer, uint64_t(1<<8));
     nibbles[nibbleCntr++/2].first  = pack(&buffer, uint64_t(1<<16));
     nibbles[nibbleCntr++/2].second = pack(&buffer, uint64_t(1<<24));
-    nibbles[nibbleCntr++/2].first  = pack(&buffer, uint64_t(1UL<<32));
-    nibbles[nibbleCntr++/2].second = pack(&buffer, uint64_t(1UL<<40));
-    nibbles[nibbleCntr++/2].first  = pack(&buffer, uint64_t(1UL<<48));
-    nibbles[nibbleCntr++/2].second = pack(&buffer, uint64_t(1UL<<56));
+    nibbles[nibbleCntr++/2].first  = pack(&buffer, uint64_t(1ULL << 32));
+    nibbles[nibbleCntr++/2].second = pack(&buffer, uint64_t(1ULL << 40));
+    nibbles[nibbleCntr++/2].first  = pack(&buffer, uint64_t(1ULL << 48));
+    nibbles[nibbleCntr++/2].second = pack(&buffer, uint64_t(1ULL << 56));
 
     // Try signed numbers
     nibbles[nibbleCntr++/2].first   = pack(&buffer, int64_t(-(1<<8)));
@@ -480,10 +480,10 @@ TEST_F(PackerTest, nibbler) {
     EXPECT_EQ(1<<8, nb.getNext<uint64_t>());
     EXPECT_EQ(1<<16, nb.getNext<uint64_t>());
     EXPECT_EQ(1<<24, nb.getNext<uint64_t>());
-    EXPECT_EQ(1UL<<32, nb.getNext<uint64_t>());
-    EXPECT_EQ(1UL<<40, nb.getNext<uint64_t>());
-    EXPECT_EQ(1UL<<48, nb.getNext<uint64_t>());
-    EXPECT_EQ(1UL<<56, nb.getNext<uint64_t>());
+    EXPECT_EQ(1ULL << 32, nb.getNext<uint64_t>());
+    EXPECT_EQ(1ULL << 40, nb.getNext<uint64_t>());
+    EXPECT_EQ(1ULL << 48, nb.getNext<uint64_t>());
+    EXPECT_EQ(1ULL << 56, nb.getNext<uint64_t>());
 
     EXPECT_EQ(int64_t(-(1<<8)), nb.getNext<int64_t>());
     EXPECT_EQ(int64_t(-(1<<16)), nb.getNext<int64_t>());

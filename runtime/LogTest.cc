@@ -17,6 +17,7 @@
 #include <iostream>
 #include <iosfwd>
 #include <cstdio>
+#include <cstring>
 #include <vector>
 #include <sstream>
 
@@ -28,6 +29,16 @@
 #include "Packer.h"
 #include "Log.h"
 #include "GeneratedCode.h"
+
+#ifdef _WIN32
+#define TEST_FILE_PATH "testFile"
+#define DECOMP_FILE_PATH "testFile2"
+#define NULL_DEVICE_PATH "NUL"
+#else
+#define TEST_FILE_PATH "/tmp/testFile"
+#define DECOMP_FILE_PATH "/tmp/testFile2"
+#define NULL_DEVICE_PATH "/dev/null"
+#endif
 
 
 extern int __fmtId__Simple32log32message32with32032parameters__testHelper47client46cc__20__;
@@ -122,7 +133,7 @@ TEST_F(LogTest, maxSizeOfHeader) {
 }
 
 TEST_F(LogTest, peekEntryType) {
-    const char *testFile = "/tmp/testFile";
+    const char *testFile = TEST_FILE_PATH;
     char buffer[100];
 
     UnknownHeader *header = reinterpret_cast<UnknownHeader*>(buffer);
@@ -142,7 +153,7 @@ TEST_F(LogTest, peekEntryType) {
     oFile.write(buffer, 4);
     oFile.close();
 
-    FILE *in = fopen(testFile, "r");
+    FILE *in = fopen(testFile, "rb");
     ASSERT_NE(nullptr, in);
 
     EXPECT_EQ(EntryType::LOG_MSGS_OR_DIC, peekEntryType(in));
@@ -305,7 +316,7 @@ TEST_F(LogTest, insertCheckpoint_end2end) {
     char backing_buffer[2048];
     char *writePos = backing_buffer;
     char *endOfBuffer = backing_buffer + 2048;
-    const char *testFile = "/tmp/testFile";
+    const char *testFile = TEST_FILE_PATH;
 
     // Write the buffer to a file and read it back
     std::ofstream oFile;
@@ -313,7 +324,7 @@ TEST_F(LogTest, insertCheckpoint_end2end) {
     oFile.write(backing_buffer, 0);
     oFile.close();
 
-    FILE *in = fopen(testFile, "r");
+    FILE *in = fopen(testFile, "rb");
     ASSERT_NE(nullptr, in);
     ASSERT_FALSE(readCheckpoint(cp1, in));
 
@@ -323,11 +334,11 @@ TEST_F(LogTest, insertCheckpoint_end2end) {
 
     // Write the buffer to a file and read it back
     fclose(in);
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(backing_buffer, writePos - backing_buffer);
     oFile.close();
 
-    in = fopen(testFile, "r");
+    in = fopen(testFile, "rb");
     ASSERT_NE(nullptr, in);
 
     ASSERT_TRUE(readCheckpoint(cp1, in));
@@ -807,12 +818,12 @@ TEST_F(LogTest, swapBuffer) {
 
 TEST_F(LogTest, Decoder_open) {
     char buffer[1000];
-    const char *testFile = "/tmp/testFile";
+    const char *testFile = TEST_FILE_PATH;
     Decoder dc;
 
     // Open an invalid file
     testing::internal::CaptureStderr();
-    EXPECT_FALSE(dc.open("/dev/null"));
+    EXPECT_FALSE(dc.open(NULL_DEVICE_PATH));
     EXPECT_TRUE(dc.filename.empty());
     EXPECT_EQ(0U, dc.inputFd);
     EXPECT_STREQ("Error: Could not read initial checkpoint, "
@@ -821,7 +832,7 @@ TEST_F(LogTest, Decoder_open) {
 
     // Write back an empty file and try to open it.
     std::ofstream oFile;
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(buffer, 0);
     oFile.close();
 
@@ -834,14 +845,14 @@ TEST_F(LogTest, Decoder_open) {
                  testing::internal::GetCapturedStderr().c_str());
 
     // Write back an invalid, but not-empty file
-    oFile.open(testFile);
-    bzero(buffer, 1000);
+    oFile.open(testFile, std::ios::binary);
+    std::memset(buffer, 0, 1000);
     oFile.write(buffer, 100);
     oFile.close();
 
     // Finally, open a file that at least has a valid checkpoint
     Encoder encoder(buffer, 1000);
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(buffer, encoder.getEncodedBytes());
     oFile.close();
 
@@ -902,7 +913,7 @@ TEST_F(LogTest, decoder_insertCheckpoint) {
 
 
 TEST_F(LogTest, decoder_readDictionary) {
-    const char *testFile = "/tmp/testFile";
+    const char *testFile = TEST_FILE_PATH;
     char backing_buffer[4096];
     char *writePos = backing_buffer;
     char *endOfBuffer = backing_buffer + sizeof(backing_buffer);
@@ -967,7 +978,7 @@ TEST_F(LogTest, decoder_readDictionary) {
         ck->newMetadataBytes = dictionaryBytes;
 
         std::ofstream oFile;
-        oFile.open(testFile);
+        oFile.open(testFile, std::ios::binary);
         oFile.write(backing_buffer, writePos - backing_buffer);
         oFile.close();
 
@@ -999,7 +1010,7 @@ TEST_F(LogTest, decoder_readDictionary) {
         ck->newMetadataBytes = dictionaryBytes;
 
         std::ofstream oFile;
-        oFile.open(testFile);
+        oFile.open(testFile, std::ios::binary);
         oFile.write(backing_buffer, writePos - backing_buffer);
         oFile.close();
 
@@ -1026,7 +1037,7 @@ TEST_F(LogTest, decoder_readDictionary) {
         // Second read
         ck->totalMetadataEntries = 4;
 
-        oFile.open(testFile);
+        oFile.open(testFile, std::ios::binary);
         oFile.write(backing_buffer, writePos - backing_buffer);
         oFile.close();
 
@@ -1064,7 +1075,7 @@ TEST_F(LogTest, decoder_readDictionary) {
         ck->totalMetadataEntries = 4;
         ck->newMetadataBytes = 0;
 
-        oFile.open(testFile);
+        oFile.open(testFile, std::ios::binary);
         oFile.write(backing_buffer, sizeof(Checkpoint));
         oFile.close();
 
@@ -1095,7 +1106,7 @@ TEST_F(LogTest, decoder_readDictionary) {
         ck->newMetadataBytes = dictionaryBytes;
         ck->totalMetadataEntries = 2;
 
-        oFile.open(testFile);
+        oFile.open(testFile, std::ios::binary);
         oFile.write(backing_buffer, sizeof(Checkpoint) + dictionaryBytes);
         oFile.close();
 
@@ -1126,7 +1137,7 @@ TEST_F(LogTest, decoder_readDictionary) {
         ck->newMetadataBytes = dictionaryBytes;
 
         std::ofstream oFile;
-        oFile.open(testFile);
+        oFile.open(testFile, std::ios::binary);
         oFile.write(backing_buffer, writePos - backing_buffer - 10);
         oFile.close();
 
@@ -1192,13 +1203,13 @@ TEST_F(LogTest, decoder_readDictionary) {
 }
 
 TEST_F(LogTest, decoder_destructor) {
-    const char *testFile = "/tmp/testFile";
+    const char *testFile = TEST_FILE_PATH;
     char buffer[1000];
 
     // Write back an invalid, but not-empty file
     std::ofstream oFile;
     Encoder encoder(buffer, 1000);
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(buffer, encoder.getEncodedBytes());
     oFile.close();
 
@@ -1239,7 +1250,7 @@ TEST_F(LogTest, decoder_allocate_free) {
 }
 
 TEST_F(LogTest, Decoder_readBufferExtent_end2end) {
-    const char *testFile = "/tmp/testFile";
+    const char *testFile = TEST_FILE_PATH;
     char inputBuffer[100], outputBuffer1[1000];
 
     // Here we use encoder to prefill the output file
@@ -1267,7 +1278,7 @@ TEST_F(LogTest, Decoder_readBufferExtent_end2end) {
     EXPECT_EQ(5U, e.lastBufferIdEncoded);
 
     std::ofstream oFile;
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(outputBuffer1, e.getEncodedBytes());
     oFile.close();
 
@@ -1295,7 +1306,7 @@ TEST_F(LogTest, Decoder_readBufferExtent_end2end) {
 }
 
 TEST_F(LogTest, Decoder_readBufferExtent_notEnoughSpace) {
-    const char *testFile = "/tmp/testFile";
+    const char *testFile = TEST_FILE_PATH;
     char inputBuffer[100], goodBuffer[1000], badBuffer[100];
 
     // Here we use encoder to prefill the output file
@@ -1327,7 +1338,7 @@ TEST_F(LogTest, Decoder_readBufferExtent_notEnoughSpace) {
     std::ofstream oFile;
 
     //  Test a file that is too small
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(badBuffer, 2);
     oFile.close();
     FILE *in = fopen(testFile, "rb");
@@ -1336,8 +1347,8 @@ TEST_F(LogTest, Decoder_readBufferExtent_notEnoughSpace) {
     fclose(in);
 
     // Test a file that contains invalid data
-    oFile.open(testFile);
-    bzero(badBuffer, 100);
+    oFile.open(testFile, std::ios::binary);
+    std::memset(badBuffer, 0, 100);
     oFile.write(badBuffer, 100);
     oFile.close();
     in = fopen(testFile, "rb");
@@ -1353,7 +1364,7 @@ TEST_F(LogTest, Decoder_readBufferExtent_notEnoughSpace) {
     be->threadIdOrPackNibble = 1;
     be->wrapAround = false;
 
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(badBuffer, sizeof(badBuffer));
     oFile.close();
     in = fopen(testFile, "rb");
@@ -1362,7 +1373,7 @@ TEST_F(LogTest, Decoder_readBufferExtent_notEnoughSpace) {
     fclose(in);
 
     // Test a file that contains partially correct data
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(goodBuffer, e.getEncodedBytes() - 1);
     oFile.close();
     in = fopen(testFile, "rb");
@@ -1380,7 +1391,7 @@ TEST_F(LogTest, Decoder_readBufferExtent_notEnoughSpace) {
     ++be;
     be->entryType = EntryType::BUFFER_EXTENT;
 
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(badBuffer, sizeof(badBuffer));
     oFile.close();
     in = fopen(testFile, "rb");
@@ -1398,7 +1409,7 @@ void aggregation(const char*, ...) {
 }
 
 TEST_F(LogTest, decompressNextLogStatement) {
-    const char *testFile = "/tmp/testFile";
+    const char *testFile = TEST_FILE_PATH;
     char inputBuffer[100], goodBuffer[1000];
 
     // Here we use encoder to prefill the output file
@@ -1427,7 +1438,7 @@ TEST_F(LogTest, decompressNextLogStatement) {
 
     // Write it out and read it back in.
     std::ofstream oFile;
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(goodBuffer, e.getEncodedBytes());
     oFile.close();
 
@@ -1487,8 +1498,8 @@ TEST_F(LogTest, decompressNextLogStatement) {
 
 TEST_F(LogTest, Decoder_internalDecompress_end2end) {
     // First we have to create a log file with encoder.
-    const char *testFile = "/tmp/testFile";
-    const char *decomp = "/tmp/testFile2";
+    const char *testFile = TEST_FILE_PATH;
+    const char *decomp = DECOMP_FILE_PATH;
     char inputBuffer[1000], buffer[1000];
     Encoder encoder(buffer, 1000, false);
 
@@ -1649,7 +1660,7 @@ TEST_F(LogTest, Decoder_internalDecompress_end2end) {
 
     // Write it out and read it back in.
     std::ofstream oFile;
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(buffer, encoder.getEncodedBytes());
     oFile.close();
 
@@ -1778,8 +1789,8 @@ TEST_F(LogTest, Decoder_internalDecompress_fileBreaks) {
     // This test is what happens if we have a break in a file. It should
     // in theory output up to that point and no more.
     char inputBuffer[1000], outputBuffer[1000];
-    const char *testFile = "/tmp/testFile";
-    const char *decomp = "/tmp/testFile2";
+    const char *testFile = TEST_FILE_PATH;
+    const char *decomp = DECOMP_FILE_PATH;
 
     UncompressedEntry* ue = reinterpret_cast<UncompressedEntry*>(inputBuffer);
     for (int i = 0; i < 5; ++i) {
@@ -1809,7 +1820,7 @@ TEST_F(LogTest, Decoder_internalDecompress_fileBreaks) {
     EXPECT_EQ(5*sizeof(UncompressedEntry), bytesRead);
 
     std::ofstream oFile;
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(outputBuffer, encoder.getEncodedBytes());
 
     // Encoder 2 does nothing except output a checkpoint
@@ -1934,8 +1945,8 @@ TEST_F(LogTest, Decoder_internalDecompress_fileBreaks2) {
     // This test is what happens if we have a break in a file. It should
     // in theory output up to that point and no more.
     char inputBuffer[1000], outputBuffer[1000];
-    const char *testFile = "/tmp/testFile";
-    const char *decomp = "/tmp/testFile2";
+    const char *testFile = TEST_FILE_PATH;
+    const char *decomp = DECOMP_FILE_PATH;
 
     UncompressedEntry* ue = reinterpret_cast<UncompressedEntry*>(inputBuffer);
     for (int i = 0; i < 5; ++i) {
@@ -1982,7 +1993,7 @@ TEST_F(LogTest, Decoder_internalDecompress_fileBreaks2) {
     EXPECT_EQ(2*sizeof(UncompressedEntry), bytesRead);
 
     std::ofstream oFile;
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(outputBuffer, encoder.getEncodedBytes());
 
     Encoder encoder3(outputBuffer, 1000);
@@ -2047,8 +2058,8 @@ TEST_F(LogTest, Decoder_internalDecompress_fileBreaks2) {
 TEST_F(LogTest, Decoder_decompressNextLogStatement_timeTravel) {
     // Tests what happen when the checkpoint is newer than the log message.
     char inputBuffer[1000], outputBuffer[1000];
-    const char *testFile = "/tmp/testFile";
-    const char *decomp = "/tmp/testFile2";
+    const char *testFile = TEST_FILE_PATH;
+    const char *decomp = DECOMP_FILE_PATH;
     LogMessage logMsg;
 
     UncompressedEntry* ue = reinterpret_cast<UncompressedEntry*>(inputBuffer);
@@ -2074,7 +2085,7 @@ TEST_F(LogTest, Decoder_decompressNextLogStatement_timeTravel) {
     EXPECT_EQ(sizeof(UncompressedEntry), bytesRead);
 
     std::ofstream oFile;
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(outputBuffer, encoder.getEncodedBytes());
     oFile.close();
 
@@ -2154,8 +2165,8 @@ TEST_F(LogTest, Decoder_decompressNextLogStatement_timeTravel) {
 
 TEST_F(LogTest, Decoder_getNextLogStatement) {
     // First we have to create a log file with encoder.
-    const char *testFile = "/tmp/testFile";
-    const char *decomp = "/tmp/testFile2";
+    const char *testFile = TEST_FILE_PATH;
+    const char *decomp = DECOMP_FILE_PATH;
     char inputBuffer[1000], buffer[1000];
     Encoder encoder(buffer, 1000, false, true);
 
@@ -2234,7 +2245,7 @@ TEST_F(LogTest, Decoder_getNextLogStatement) {
 
     // Write it out and read it back in.
     std::ofstream oFile;
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(buffer, encoder.getEncodedBytes());
     oFile.close();
 
@@ -2294,7 +2305,7 @@ TEST_F(LogTest, Decoder_getNextLogStatement) {
     EXPECT_EQ(uint64_tParamId, logMsg.getLogId());
     EXPECT_EQ(30, logMsg.getTimestamp());
     EXPECT_EQ(1, logMsg.getNumArgs());
-    EXPECT_EQ(3U, logMsg.get<uint64_t>(0));
+    EXPECT_EQ(3UL, logMsg.get<unsigned long>(0));
 
     ASSERT_TRUE(dc.getNextLogStatement(logMsg));
     ASSERT_TRUE(logMsg.valid());
@@ -2348,8 +2359,8 @@ getCount() {
 
 TEST_F(LogTest, Decoder_internalDecompress_aggregationFn) {
     // First we have to create a log file with encoder.
-    const char *testFile = "/tmp/testFile";
-    const char *decomp = "/tmp/testFile2";
+    const char *testFile = TEST_FILE_PATH;
+    const char *decomp = DECOMP_FILE_PATH;
     char inputBuffer[1000], buffer[1000];
     Encoder encoder(buffer, 1000, false);
 
@@ -2510,7 +2521,7 @@ TEST_F(LogTest, Decoder_internalDecompress_aggregationFn) {
 
     // Write it out and read it back in.
     std::ofstream oFile;
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(buffer, encoder.getEncodedBytes());
     oFile.close();
 
@@ -2842,7 +2853,7 @@ TEST_F(LogTest, readDictionaryFragment) {
     df->newMetadataBytes = 0;
 
     std::ofstream oFile;
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(buffer, sizeof(DictionaryFragment) - 1);
     oFile.close();
 
@@ -2857,7 +2868,7 @@ TEST_F(LogTest, readDictionaryFragment) {
     std::remove(testFile);
 
     // Just enough, but header only
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(buffer, sizeof(DictionaryFragment));
     oFile.close();
 
@@ -2899,7 +2910,7 @@ TEST_F(LogTest, readDictionaryFragment) {
     df->newMetadataBytes = writePos - buffer;
     df->totalMetadataEntries = 2;
 
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(buffer, sizeof(DictionaryFragment) + sizeof(CompressedLogInfo) - 1);
     oFile.close();
 
@@ -2913,7 +2924,7 @@ TEST_F(LogTest, readDictionaryFragment) {
     std::remove(testFile);
 
     // Header and complete CompressedInfo, but incomplete filenames
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(buffer, sizeof(DictionaryFragment)
                             + sizeof(CompressedLogInfo)
                             + strlen(filename)
@@ -2930,7 +2941,7 @@ TEST_F(LogTest, readDictionaryFragment) {
     std::remove(testFile);
 
     // Finally, one that works okay
-    oFile.open(testFile);
+    oFile.open(testFile, std::ios::binary);
     oFile.write(buffer, writePos - buffer);
     oFile.close();
 

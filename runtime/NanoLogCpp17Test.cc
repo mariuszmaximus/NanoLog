@@ -843,10 +843,10 @@ TEST_F(NanoLogCpp17Test, compress_internal) {
     // Second string
     EXPECT_EQ(0, memcmp(out, wString, wStringBytes));
     out += wStringBytes;
-    EXPECT_EQ(0, *out); ++out;
-    EXPECT_EQ(0, *out); ++out;
-    EXPECT_EQ(0, *out); ++out;
-    EXPECT_EQ(0, *out); ++out;
+    for (size_t i = 0; i < sizeof(wchar_t); ++i) {
+        EXPECT_EQ(0, *out);
+        ++out;
+    }
 }
 
 TEST_F(NanoLogCpp17Test, compress) {
@@ -924,10 +924,10 @@ TEST_F(NanoLogCpp17Test, compress) {
     out += wStringBytes;
 
     // Make sure the terminal to wchar_t is right
-    EXPECT_EQ(0, *out); ++out;
-    EXPECT_EQ(0, *out); ++out;
-    EXPECT_EQ(0, *out); ++out;
-    EXPECT_EQ(0, *out); ++out;
+    for (size_t i = 0; i < sizeof(wchar_t); ++i) {
+        EXPECT_EQ(0, *out);
+        ++out;
+    }
 }
 
 }; //namespace
