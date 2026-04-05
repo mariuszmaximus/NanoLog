@@ -167,7 +167,9 @@ TEST_F(NanoLogTest, StagingBuffer_finishReservation) {
 }
 
 TEST_F(NanoLogTest, StagingBuffer_finishReservation_asserts) {
-
+#ifdef NDEBUG
+    printf("Skipping death assertions in release builds because bounds-check asserts are disabled.\n");
+#else
     // Case 1a: Ran out of space and didn't reserve (Artificial)
     EXPECT_EQ(bufferSize, sb->minFreeSpace);
     sb->minFreeSpace = 10;
@@ -203,6 +205,7 @@ TEST_F(NanoLogTest, StagingBuffer_finishReservation_asserts) {
     sb->producerPos = sb->storage + halfSize - 50;
     sb->consumerPos = sb->storage + halfSize + 100;
     sb->reserveSpaceInternal(100);
+#endif
 }
 
 TEST_F(NanoLogTest, StagingBuffer_peek) {
