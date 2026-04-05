@@ -1,0 +1,73 @@
+name: Build Tests
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        cxx:
+          - g++
+          - g++-13
+
+    env:
+      CXX: ${{ matrix.cxx }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++ g++-13 make
+
+      - name: Show compiler version
+        run: $CXX --version
+
+      - name: Run Preprocessor Unit Tests
+        run: |
+          cd "$GITHUB_WORKSPACE/preprocessor"
+          python3 ./UnitTests.py
+
+      - name: Run Library Unit Tests
+        run: |
+          cd "$GITHUB_WORKSPACE/runtime"
+          make test -j2
+          ./test --gtest_filter=-NanoLogTest.StagingBuffer_finishReservation_asserts:PackerTest.nibbler_assert
+
+      - name: Build Sample App
+        run: |
+          cd "$GITHUB_WORKSPACE/sample"
+          make clean-all
+          make depend -C ../runtime
+          make -j"$(nproc)"
+
+      - name: Build Preprocessor Sample App
+        run: |
+          cd "$GITHUB_WORKSPACE/sample_preprocessor"
+          make clean-all
+          make depend -C ../runtime
+          make -j"$(nproc)"
+
+      - name: Run Integration Test
+        run: |
+          cd "$GITHUB_WORKSPACE/integrationTest"
+          make clean-all
+          ./run.sh
