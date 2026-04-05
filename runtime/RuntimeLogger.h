@@ -16,7 +16,6 @@
 #ifndef RUNTIME_NANOLOG_H
 #define RUNTIME_NANOLOG_H
 
-#include <aio.h>
 #include <cassert>
 
 #include <condition_variable>
@@ -231,7 +230,7 @@ using namespace NanoLog;
         int outputFd;
 
         // POSIX AIO structure used to communicate async IO requests
-        struct aiocb aioCb;
+        NanoLogPlatform::AioCb aioCb;
 
         // Used to stage the compressed log messages before passing it on to the
         // POSIX AIO library.

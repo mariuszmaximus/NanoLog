@@ -102,19 +102,19 @@ pack(char **buffer, T val) {
 
     //TODO(syang0) Is this too costly vs. a simple for loop?
     int numBytes;
-    if (val < (1UL << 8)) {
+    if (val < (1ULL << 8)) {
             numBytes = 1;
-    } else if (val < (1UL << 16)) {
+    } else if (val < (1ULL << 16)) {
         numBytes = 2;
-    } else if (val < (1UL << 24)) {
+    } else if (val < (1ULL << 24)) {
         numBytes = 3;
-    } else if (val < (1UL << 32)) {
+    } else if (val < (1ULL << 32)) {
         numBytes = 4;
-    } else if (val < (1UL << 40)) {
+    } else if (val < (1ULL << 40)) {
         numBytes = 5;
-    } else if (val < (1UL << 48)) {
+    } else if (val < (1ULL << 48)) {
         numBytes = 6;
-    } else if (val < (1UL << 56)) {
+    } else if (val < (1ULL << 56)) {
         numBytes = 7;
     } else {
         numBytes = 8;
@@ -162,6 +162,7 @@ pack(char **buffer, int64_t val)
 
 //TODO(syang0) we should measure the performance of doing it this way
 // vs taking both the negated and non-negated versions and encoding the smaller
+#if !defined(_WIN32)
 inline int
 pack(char **buffer, long long int val)
 {
@@ -170,6 +171,7 @@ pack(char **buffer, long long int val)
     else
         return 8 + pack<uint64_t>(buffer, static_cast<uint64_t>(-val));
 }
+#endif
 
 // The following pack functions that specialize on smaller signed types don't
 // make sense in the context of NanoLog since printf doesn't allow the

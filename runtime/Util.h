@@ -18,11 +18,7 @@
 
 #include <time.h>
 #include <stdint.h>
-#include <sched.h>
 #include <cassert>
-#include <sys/syscall.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
 #include <cstdio>
 #include <cstdlib>
 
@@ -30,6 +26,12 @@
 #include <stdexcept>
 
 #include "Portability.h"
+
+#ifndef _WIN32
+#include <sched.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#endif
 
 namespace NanoLogInternal {
 
@@ -76,10 +78,14 @@ rdpmc(int ecx)
   * resources
   */
 static
-pid_t FORCE_INLINE
+uint32_t FORCE_INLINE
 gettid()
 {
-    return static_cast<pid_t>(syscall( __NR_gettid ));
+#ifdef _WIN32
+    return static_cast<uint32_t>(GetCurrentThreadId());
+#else
+    return static_cast<uint32_t>(syscall(__NR_gettid));
+#endif
 }
 
 /**
@@ -94,8 +100,12 @@ void pinThreadToCore(int id) {
     cpu_set_t cpuset;
 
     CPU_ZERO(&cpuset);
-        CPU_SET(id, &cpuset);
-        assert(sched_setaffinity(0, sizeof(cpuset), &cpuset) == 0);
+    CPU_SET(id, &cpuset);
+#ifdef _WIN32
+    assert(SetThreadAffinityMask(GetCurrentThread(), cpuset.mask) != 0);
+#else
+    assert(sched_setaffinity(0, sizeof(cpuset), &cpuset) == 0);
+#endif
 }
 
 /**
@@ -108,7 +118,14 @@ cpu_set_t getCpuAffinity() {
     cpu_set_t cpuset;
 
     CPU_ZERO(&cpuset);
+#ifdef _WIN32
+    DWORD_PTR processMask = 0;
+    DWORD_PTR systemMask = 0;
+    assert(GetProcessAffinityMask(GetCurrentProcess(), &processMask, &systemMask));
+    cpuset.mask = processMask;
+#else
     assert(sched_getaffinity(0, sizeof(cpuset), &cpuset) == 0);
+#endif
     return cpuset;
 }
 
@@ -123,7 +140,11 @@ cpu_set_t getCpuAffinity() {
  */
 static FORCE_INLINE
 void setCpuAffinity(cpu_set_t cpuset) {
+#ifdef _WIN32
+    assert(SetThreadAffinityMask(GetCurrentThread(), cpuset.mask) != 0);
+#else
     assert(sched_setaffinity(0, sizeof(cpuset), &cpuset) == 0);
+#endif
 }
 
 /**

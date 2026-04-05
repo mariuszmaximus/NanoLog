@@ -13,7 +13,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <cctype>
 #include <sstream>
+#include <vector>
 
 #include "Util.h"
 #include <stdio.h>
@@ -53,14 +55,14 @@ vformat(const char* format, va_list ap)
     // Try 1K, if not the return value will tell us how much is necessary.
     int bufSize = 1024;
     while (true) {
-        char buf[bufSize];
+        std::vector<char> buf(static_cast<size_t>(bufSize));
         // vsnprintf trashes the va_list, so copy it first
         va_list aq;
         __va_copy(aq, ap);
-        int r = vsnprintf(buf, bufSize, format, aq);
+        int r = vsnprintf(buf.data(), static_cast<size_t>(bufSize), format, aq);
         assert(r >= 0); // old glibc versions returned -1
         if (r < bufSize) {
-            s = buf;
+            s = buf.data();
             break;
         }
         bufSize = r + 1;
@@ -86,7 +88,8 @@ hexDump(const void *buf, uint64_t bytes)
         char hex[16][3];
         char ascii[17];
 
-        snprintf(offset, sizeof(offset), "%016lx", i);
+        snprintf(offset, sizeof(offset), "%016llx",
+                 static_cast<unsigned long long>(i));
         offset[sizeof(offset) - 1] = '\0';
 
         for (j = 0; j < 16; j++) {

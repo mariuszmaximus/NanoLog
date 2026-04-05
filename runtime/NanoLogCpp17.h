@@ -465,7 +465,7 @@ store_argument(char **storage,
  * \param rest
  *      Rest of the remaining variable number of arguments
  */
-template<int argNum = 0, unsigned long N, int M, typename T1, typename... Ts>
+template<int argNum = 0, size_t N, int M, typename T1, typename... Ts>
 inline void
 store_arguments(const std::array<ParamType, N>& paramTypes,
                 size_t (&stringBytes)[M],
@@ -482,7 +482,7 @@ store_arguments(const std::array<ParamType, N>& paramTypes,
  * Specialization of store_arguments that processes no arguments, i.e. this
  * is the end of the head/rest recursion. See above for full documentation.
  */
-template<int argNum = 0, unsigned long N, int M>
+template<int argNum = 0, size_t N, int M>
 inline void
 store_arguments(const std::array<ParamType, N>&,
                 size_t (&stringSizes)[M],
@@ -696,7 +696,7 @@ getArgSize(const ParamType fmtType,
  *      Total number of bytes needed to represent all arguments with no
  *      compression in the NanoLog system.
  */
-template<int argNum = 0, unsigned long N, int M, typename T1, typename... Ts>
+template<int argNum = 0, size_t N, int M, typename T1, typename... Ts>
 inline size_t
 getArgSizes(const std::array<ParamType, N>& argFmtTypes,
             uint64_t &previousPrecision,
@@ -713,7 +713,7 @@ getArgSizes(const std::array<ParamType, N>& argFmtTypes,
  * Specialization for getArgSizes when there are no arguments, i.e. it is
  * the end of the recursion. (See above for documentation)
  */
-template<int argNum = 0, unsigned long N, int M>
+template<int argNum = 0, size_t N, int M>
 inline size_t
 getArgSizes(const std::array<ParamType, N>&, uint64_t &, size_t (&)[M])
 {
@@ -787,7 +787,7 @@ compressSingle(BufferUtils::TwoNibbles* nibbles,
         }();
 #pragma GCC diagnostic pop
 
-        bzero(*out, characterWidth);
+        std::memset(*out, 0, characterWidth);
         *out += characterWidth;
         return;
     }
@@ -991,7 +991,7 @@ compress(int numNibbles, const ParamType *paramTypes, char **input, char **outpu
  * \param args
  *      Argument pack for all the arguments for the log invocation
  */
-template<long unsigned int N, int M, typename... Ts>
+template<size_t N, int M, typename... Ts>
 inline void
 log(int &logId,
     const char *filename,

@@ -1,6 +1,9 @@
 .idea/
-CMakeLists.txt
+
 cmake-build-debug/
 make-all.sh
 
 ._*
+/build
+/build-cmake
+/build-cmake2

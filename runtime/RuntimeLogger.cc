@@ -21,7 +21,6 @@
 #include <sstream>
 #include <string>
 #include <stdlib.h>
-#include <unistd.h>
 
 #include "Cycles.h"         /* Cycles::rdtsc() */
 #include "RuntimeLogger.h"
@@ -73,7 +72,7 @@ RuntimeLogger::RuntimeLogger()
         stagingBufferPeekDist[i] = 0;
 
     const char *filename = NanoLogConfig::DEFAULT_LOG_FILE;
-    outputFd = open(filename, NanoLogConfig::FILE_PARAMS, 0666);
+    outputFd = NanoLogPlatform::openFile(filename, NanoLogConfig::FILE_PARAMS, 0666);
     if (outputFd < 0) {
         fprintf(stderr, "NanoLog could not open the default file location "
                 "for the log file (\"%s\").\r\n Please check the permissions "
@@ -84,16 +83,20 @@ RuntimeLogger::RuntimeLogger()
 
     memset(&aioCb, 0, sizeof(aioCb));
 
-    int err = posix_memalign(reinterpret_cast<void **>(&compressingBuffer),
-                             512, NanoLogConfig::OUTPUT_BUFFER_SIZE);
+    int err = NanoLogPlatform::alignedAlloc(
+            reinterpret_cast<void **>(&compressingBuffer),
+            512,
+            NanoLogConfig::OUTPUT_BUFFER_SIZE);
     if (err) {
         perror("The NanoLog system was not able to allocate enough memory "
                        "to support its operations. Quitting...\r\n");
         std::exit(-1);
     }
 
-    err = posix_memalign(reinterpret_cast<void **>(&outputDoubleBuffer),
-                         512, NanoLogConfig::OUTPUT_BUFFER_SIZE);
+    err = NanoLogPlatform::alignedAlloc(
+            reinterpret_cast<void **>(&outputDoubleBuffer),
+            512,
+            NanoLogConfig::OUTPUT_BUFFER_SIZE);
     if (err) {
         perror("The NanoLog system was not able to allocate enough memory "
                        "to support its operations. Quitting...\r\n");
@@ -121,17 +124,17 @@ RuntimeLogger::~RuntimeLogger() {
 
     // Free all the data structures
     if (compressingBuffer) {
-        free(compressingBuffer);
+        NanoLogPlatform::alignedFree(compressingBuffer);
         compressingBuffer = nullptr;
     }
 
     if (outputDoubleBuffer) {
-        free(outputDoubleBuffer);
+        NanoLogPlatform::alignedFree(outputDoubleBuffer);
         outputDoubleBuffer = nullptr;
     }
 
     if (outputFd > 0)
-        close(outputFd);
+        NanoLogPlatform::closeFile(outputFd);
 
     outputFd = 0;
 }
@@ -143,7 +146,7 @@ RuntimeLogger::getStats() {
     char buffer[1024];
     // Leaks abstraction, but basically flush so we get all the time
     uint64_t start = PerfUtils::Cycles::rdtsc();
-    fdatasync(nanoLogSingleton.outputFd);
+    NanoLogPlatform::flushFile(nanoLogSingleton.outputFd);
     uint64_t stop = PerfUtils::Cycles::rdtsc();
     nanoLogSingleton.cyclesDiskIO_upperBound += (stop - start);
 
@@ -319,16 +322,16 @@ RuntimeLogger::preallocate() {
 void
 RuntimeLogger::waitForAIO() {
     if (hasOutstandingOperation) {
-        if (aio_error(&aioCb) == EINPROGRESS) {
-            const struct aiocb *const aiocb_list[] = {&aioCb};
-            int err = aio_suspend(aiocb_list, 1, NULL);
+        if (NanoLogPlatform::aioError(&aioCb) == EINPROGRESS) {
+            const NanoLogPlatform::AioCb *const aiocb_list[] = {&aioCb};
+            int err = NanoLogPlatform::aioSuspend(aiocb_list, 1, NULL);
 
             if (err != 0)
                 perror("LogCompressor's Posix AIO suspend operation failed");
         }
 
-        int err = aio_error(&aioCb);
-        ssize_t ret = aio_return(&aioCb);
+        int err = NanoLogPlatform::aioError(&aioCb);
+        ssize_t ret = NanoLogPlatform::aioReturn(&aioCb);
 
         if (err != 0) {
             fprintf(stderr, "LogCompressor's POSIX AIO failed with %d: %s\r\n",
@@ -383,7 +386,7 @@ RuntimeLogger::compressionThreadMain() {
     while (!compressionThreadShouldExit || encoder.getEncodedBytes() > 0
                                         || hasOutstandingOperation)
     {
-        coreId = sched_getcpu();
+        coreId = NanoLogPlatform::currentCpu();
 
         // Indicates how many bytes we have consumed from the StagingBuffers
         // in a single iteration of the while above. A value of 0 means we
@@ -535,13 +538,13 @@ RuntimeLogger::compressionThreadMain() {
         }
 
         if (hasOutstandingOperation) {
-            if (aio_error(&aioCb) == EINPROGRESS) {
-                const struct aiocb *const aiocb_list[] = {&aioCb};
+            if (NanoLogPlatform::aioError(&aioCb) == EINPROGRESS) {
+                const NanoLogPlatform::AioCb *const aiocb_list[] = {&aioCb};
                 if (outputBufferFull) {
                     // If the output buffer is full and we're not done,
                     // wait for completion
                     cyclesActive += PerfUtils::Cycles::rdtsc() - cyclesAwakeStart;
-                    int err = aio_suspend(aiocb_list, 1, NULL);
+                    int err = NanoLogPlatform::aioSuspend(aiocb_list, 1, NULL);
                     cyclesAwakeStart = PerfUtils::Cycles::rdtsc();
                     if (err != 0)
                         perror("LogCompressor's Posix AIO "
@@ -559,14 +562,14 @@ RuntimeLogger::compressionThreadMain() {
                         cyclesAwakeStart = PerfUtils::Cycles::rdtsc();
                     }
 
-                    if (aio_error(&aioCb) == EINPROGRESS)
+                    if (NanoLogPlatform::aioError(&aioCb) == EINPROGRESS)
                         continue;
                 }
             }
 
             // Finishing up the IO
-            int err = aio_error(&aioCb);
-            ssize_t ret = aio_return(&aioCb);
+            int err = NanoLogPlatform::aioError(&aioCb);
+            ssize_t ret = NanoLogPlatform::aioReturn(&aioCb);
 
             if (err != 0) {
                 fprintf(stderr, "LogCompressor's POSIX AIO failed"
@@ -612,7 +615,7 @@ RuntimeLogger::compressionThreadMain() {
         totalBytesWritten += bytesToWrite;
 
         cyclesAtLastAIOStart = PerfUtils::Cycles::rdtsc();
-        if (aio_write(&aioCb) == -1)
+        if (NanoLogPlatform::aioWrite(&aioCb) == -1)
             fprintf(stderr, "Error at aio_write(): %s\n", strerror(errno));
 
         hasOutstandingOperation = true;
@@ -632,14 +635,15 @@ RuntimeLogger::compressionThreadMain() {
 void
 RuntimeLogger::setLogFile_internal(const char *filename) {
     // Check if it exists and is readable/writeable
-    if (access(filename, F_OK) == 0 && access(filename, R_OK | W_OK) != 0) {
+    if (NanoLogPlatform::accessFile(filename, F_OK) == 0
+            && NanoLogPlatform::accessFile(filename, R_OK | W_OK) != 0) {
         std::string err = "Unable to read/write from new log file: ";
         err.append(filename);
         throw std::ios_base::failure(err);
     }
 
     // Try to open the file
-    int newFd = open(filename, NanoLogConfig::FILE_PARAMS, 0666);
+    int newFd = NanoLogPlatform::openFile(filename, NanoLogConfig::FILE_PARAMS, 0666);
     if (newFd < 0) {
         std::string err = "Unable to open file new log file: '";
         err.append(filename);
@@ -662,7 +666,7 @@ RuntimeLogger::setLogFile_internal(const char *filename) {
         compressionThread.join();
 
     if (outputFd > 0)
-        close(outputFd);
+        NanoLogPlatform::closeFile(outputFd);
     outputFd = newFd;
 
     // Relaunch thread

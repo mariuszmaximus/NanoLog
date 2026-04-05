@@ -14,8 +14,6 @@
  */
 
 #include <algorithm>
-
-#include <bits/algorithmfwd.h>
 #include <regex>
 #include <vector>
 
@@ -839,7 +837,9 @@ Log::Decoder::createMicroCode(char **microCode,
     fm->logLevel = severity;
     fm->lineNumber = linenum;
     fm->filenameLength = static_cast<uint16_t>(strlen(filename) + 1);
-    *microCode = stpcpy(*microCode, filename) + 1;
+    size_t filenameBytes = strlen(filename) + 1;
+    memcpy(*microCode, filename, filenameBytes);
+    *microCode += filenameBytes;
 
     fm->numNibbles = 0;
     fm->numPrintFragments = 0;
