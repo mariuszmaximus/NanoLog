@@ -1,0 +1,37 @@
+name: Ubuntu Build And Run Sample
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-run-sample:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ python3
+
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Run sample application
+        run: ./build/sample/sampleApplication
+
+      - name: Decompress log and verify output
+        run: |
+          ./build/runtime/decompressor decompress /tmp/logFile | tee decompressed.log
+          grep -F "Simple log message with 0 parameters" decompressed.log
+          grep -F "A string, pointer, number, and float:" decompressed.log
